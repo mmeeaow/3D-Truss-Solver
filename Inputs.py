@@ -35,11 +35,11 @@ def submit():
 def select_input_file():
     user_file = filedialog.askopenfilename(
         title="Select Input File",
-        filetypes=[("CSV Files", "*.csv")]
+        filetypes=[("Excel Files", "*.xlsx")]
     )
 
     if user_file:
-        print(f"File Selected: {user_file}")
+        messagebox.showinfo(f"File Selected: {user_file}")
         try:
             inputs = read_excel(user_file, skiprows = 1, dtype = float)
             if inputs.shape[1] != 15:
@@ -101,7 +101,5 @@ submit_button.pack(padx = 15, pady = 21)
 
 select_button2 = k.Button(root, text="Select CSV File", command=select_input_file)
 select_button2.pack(padx=10, pady=21)
-
-
 
 root.mainloop()
