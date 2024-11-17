@@ -3,7 +3,7 @@
 import tkinter as k
 from tkinter import ttk
 from tkinter import filedialog, messagebox
-from pandas import read_csv
+from pandas import read_excel
 import psutil
 
 def update_units(*args):
@@ -41,7 +41,7 @@ def select_input_file():
     if user_file:
         print(f"File Selected: {user_file}")
         try:
-            inputs = read_csv(user_file, delimiter = ",", skiprows = 1, dtype = float)
+            inputs = read_excel(user_file, skiprows = 1, dtype = float)
             if inputs.shape[1] != 15:
                messagebox.showerror("Error", "The selected file was not readable. Please ensure it has the correct number of columns.")
                return None

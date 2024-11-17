@@ -69,7 +69,75 @@ Reactioncoor = [Data[:, 5], Data[:, 6], Data[:, 7]]
 E = Data[:, 14]
 A = Data[:, 15]
 
+Member_L = np.zeros(maxMember, 1)
+c = [maxMember, 3]
+#1st column is cosx, 2nd column is cosy and 3rd is cosz
 
+for j in range(1, maxMember):
+    dx = Nodecoor[Membernode[j, 2], 1] - Nodecoor[Membernode[j, 1], 1]
+    dy = Nodecoor[Membernode[j, 2], 2] - Nodecoor[Membernode[j, 1], 2]
+    dz = Nodecoor[Membernode[j, 2], 3] - Nodecoor[Membernode[j, 1], 3]
+    Member_L[j, 1] = np.sqrt(dx^2 + dy^2 + dz^2)
+    c[j, 1] = dx / Member_L[j, 1]
+    c[j, 2] = dy / Member_L[j, 1]
+    c[j, 3] = dz / Member_L[j, 1]
 
+global_K = np.zeros[3*maxJoint]
 
+for j in range(1, maxMember):
+    K = E[ j, 1] * A[ j, 1] / Member_L[j, 1]
+    
+    #The multiple different cos product terms are calculated here
+    c2 = [c[j, 1]^2, c[j, 2]^2, c[j, 3]^2]
+    cp = [c[j, 1]*c[j, 2], c[j, 1]*c[j, 3], c[j, 2]*c[j, 3]]
+    
+    #row 1
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 2] += K*c2[j, 1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 1] += K*cp[j, 1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 0] += K*cp[j, 2]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 2] - 2] -= K*c2[j, 1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 2] - 1] -= K*cp[j, 1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 2] - 0] -= K*cp[j, 2]
 
+    #row 2
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 2] += K*cp[j, 1]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 1] += K*c2[j, 2]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 0] += K*cp[j, 3]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 2] - 2] -= K*cp[j, 1]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 2] - 1] -= K*c2[j, 2]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 2] - 0] -= K*cp[j, 3]
+
+    #row 3
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 2] += K*cp[j, 2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 1] += K*cp[j, 3]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 0] += K*c2[j, 3]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 2] - 2] -= K*cp[j, 2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 2] - 1] -= K*cp[j, 3]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 2] - 0] -= K*c2[j, 3]
+
+    #row 4
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 1] - 2] -= K*c2[j, 1]
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 1] - 1] -= K*cp[j, 1]
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 1] - 0] -= K*cp[j, 2]
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 2] - 2] += K*c2[j, 1]
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 2] - 1] += K*cp[j, 1]
+    global_K[3*Membernode[j, 2] - 2, 3*Membernode[j, 2] - 0] += K*cp[j, 2]
+
+    #row 5
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 1] - 2] -= K*cp[j, 1]
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 1] - 1] -= K*c2[j, 2]
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 1] - 0] -= K*cp[j, 3]
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 2] - 2] += K*cp[j, 1]
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 2] - 1] += K*c2[j, 2]
+    global_K[3*Membernode[j, 2] - 1, 3*Membernode[j, 2] - 0] += K*cp[j, 3]
+
+    #row 6
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 1] - 2] -= K*cp[j, 2]
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 1] - 1] -= K*cp[j, 3]
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 1] - 0] -= K*c2[j, 3]
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 2] - 2] += K*cp[j, 2]
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 2] - 1] += K*cp[j, 3]
+    global_K[3*Membernode[j, 2] - 0, 3*Membernode[j, 2] - 0] += K*c2[j, 3]
+
+messagebox.showinfo(f"The K matrix formed is: {global_K}")
+   
