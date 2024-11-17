@@ -42,7 +42,7 @@ def select_input_file():
         print(f"File Selected: {user_file}")
         try:
             inputs = read_csv(user_file, delimiter = ",", skiprows = 1, dtype = float)
-            if inputs.shape[1] != 10:
+            if inputs.shape[1] != 15:
                messagebox.showerror("Error", "The selected file was not readable. Please ensure it has the correct number of columns.")
                return None
             else:
@@ -105,11 +105,3 @@ select_button2.pack(padx=10, pady=21)
 
 
 root.mainloop()
-
-
-
-
-
-
-
-
