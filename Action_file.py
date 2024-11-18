@@ -171,14 +171,16 @@ for j in range(maxJoint):
         N_result[j, k] = N_disp[3*j - (2-k)]
 
 Stresses = np.zeros(maxMember, 1)
+du = [0, 0, 0]
 
 for i in range(maxMember):
     #Directional Displacements
+    du[1] = c[j, 0] * (N_result[Membernode[i, 1], 0] - N_result[Membernode[i, 0], 0])
+    du[2] = c[j, 1] * (N_result[Membernode[i, 1], 1] - N_result[Membernode[i, 0], 1])
+    du[3] = c[j, 2] * (N_result[Membernode[i, 1], 2] - N_result[Membernode[i, 0], 2])
 
-
-
-
-    Stresses[i, 0] = (E[i, 0]/Member_L[i, 0]) 
+    Stresses[i, 0] = (E[i, 0]/Member_L[i, 0])*(du[0] + du[1] + du[2])
+     
 
 
 
