@@ -9,7 +9,7 @@ Data = None
 while Data == None:
     Data = i.select_input_file()
 
-messagebox.showinfo("Progress", "File has been selected.")
+messagebox.showinfo("Progress", text = "File has been selected.")
 
 dim = i.dimension_combo
 E_units = i.Youngs_modulus_combo
@@ -188,10 +188,5 @@ Reaction3d = np.zeros(maxJoint, 3)
 for j in range(maxJoint):
     for k in range(3):
         Reaction3d[j, k] = R[3*j - (2-k)]
-
-
-
-
-
 
 

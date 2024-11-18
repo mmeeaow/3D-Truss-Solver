@@ -39,7 +39,7 @@ def select_input_file():
     )
 
     if user_file:
-        messagebox.showinfo(f"File Selected: {user_file}")
+        messagebox.showinfo(message= f"File Selected: {user_file}")
         try:
             inputs = read_excel(user_file, skiprows = 1, dtype = float)
             if inputs.shape[1] != 15:
