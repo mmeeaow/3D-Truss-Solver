@@ -180,7 +180,17 @@ for i in range(maxMember):
     du[3] = c[j, 2] * (N_result[Membernode[i, 1], 2] - N_result[Membernode[i, 0], 2])
 
     Stresses[i, 0] = (E[i, 0]/Member_L[i, 0])*(du[0] + du[1] + du[2])
-     
+
+#Reaction forces
+R = global_K * N_disp
+Reaction3d = np.zeros(maxJoint, 3)
+
+for j in range(maxJoint):
+    for k in range(3):
+        Reaction3d[j, k] = R[3*j - (2-k)]
+
+
+
 
 
 
