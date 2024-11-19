@@ -3,13 +3,14 @@ import multiprocessing as mp
 from tkinter import messagebox
 import numpy as np
 import scipy as sp
+import subprocess
 
-Data = None
+Data = i.select_input_file()
 
-while Data == None:
-    Data = i.select_input_file()
+messagebox.showinfo(title="Progress", text = "Starting solving process.")
 
-messagebox.showinfo("Progress", text = "File has been selected.")
+def post_process():
+    subprocess.run(['python', 'Post_processing.py'], check=True)
 
 dim = i.dimension_combo
 E_units = i.Youngs_modulus_combo
@@ -58,21 +59,21 @@ def Unit_Converter(dim, E_units, F_units):
 def remove_empty_entries(Data):
     return [t for t in Data if t == "" or t == 'None' or t == 'nan']
 
-maxJoint = max(Data[:, 1])
-maxMember = max(Data[:, 11])
+maxJoint = int(max(Data.iloc[:, 0]))
+maxMember = int(max(Data.iloc[:, 0]))
 
-Membernode = [Data[:,12], Data[:, 13]]
+Membernode = np.array(Data.iloc[:,11], Data.iloc[:, 12], dtype=int)
 
-Nodecoor = [Data[:, 2], Data[:, 3], Data[:, 4]]
-Reactioncoor = [Data[:, 5], Data[:, 6], Data[:, 7]]
+Nodecoor = np.array(Data.iloc[:, 1], Data.iloc[:, 2], Data.iloc[:, 3])
+Reactioncoor = [Data[:, 4], Data[:, 5], Data[:, 6]]
 
-Force = [Data[:, 8], Data[:, 9], Data[:, 10]]
+Force = [Data.iloc[:, 7], Data.iloc[:, 8], Data.iloc[:, 9]]
 
-E = Data[:, 14]
-A = Data[:, 15]
+E = Data.iloc[:, 13]
+A = Data.iloc[:, 14]
 
-Member_L = np.zeros(maxMember, 1)
-c = np.zeros[maxMember, 3]
+Member_L = np.zeros((maxMember, 1))
+c = np.zeros((maxMember, 3))
 #1st column is cosx, 2nd column is cosy and 3rd is cosz
 
 for j in range(1, maxMember):
@@ -143,14 +144,14 @@ global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 0] += K*c2[j, 2]
 #load vector
 def load_func(Force):
     load = np.zeros(3*maxJoint,1)
-    for j in range(1, maxJoint):
+    for j in range(maxJoint):
         for k in range(0, 3):
             load[3*j - (2-k)] = Force[j, k]
 
     return load
 
 global_K_store = global_K
-for i in range(1, maxJoint):
+for i in range(maxJoint):
     for j in range(0, 3):
         if Reactioncoor[i, j] == 1:
             global_K_store[:, 3*i - (2-j)] = 0
@@ -164,13 +165,13 @@ load = load_func(Force)
 
 N_disp = np.linalg.solve(global_K_store, load)
 
-N_result = np.zeros(maxJoint, 3)
+N_result = np.zeros((maxJoint, 3))
 
 for j in range(maxJoint):
     for k in range(3):
         N_result[j, k] = N_disp[3*j - (2-k)]
 
-Stresses = np.zeros(maxMember, 1)
+Stresses = np.zeros((maxMember, 1))
 du = [0, 0, 0]
 
 for i in range(maxMember):
@@ -183,10 +184,11 @@ for i in range(maxMember):
 
 #Reaction forces
 R = global_K * N_disp
-Reaction3d = np.zeros(maxJoint, 3)
+Reaction3d = np.zeros((maxJoint, 3))
 
 for j in range(maxJoint):
     for k in range(3):
         Reaction3d[j, k] = R[3*j - (2-k)]
 
+post_process()
 

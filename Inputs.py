@@ -48,7 +48,7 @@ def select_input_file():
             else:
                 return inputs
         except Exception as e:
-            messagebox.showerror("Error", "Error: The file selected is not a valid CSV file.\n" + str(e))
+            messagebox.showerror("Error", "Error: The file selected is not a valid XLSX file.\n" + str(e))
             return None
     return None
 
