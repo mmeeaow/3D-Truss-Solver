@@ -5,6 +5,7 @@ from tkinter import ttk
 from tkinter import filedialog, messagebox
 from pandas import read_excel
 import psutil
+import subprocess
 
 def update_units(*args):
     # This function is called whenever the user selects a unit from the dropdown menu.
@@ -52,6 +53,9 @@ def select_input_file():
             return None
     return None
 
+def complete_calculation():
+    subprocess.run(['python', 'Action_file.py'], check = False)
+
 
 #main window
 root = k.Tk()
@@ -96,10 +100,8 @@ num_cores_combo['values'] = [str(i) for i in range(1, available_cpu_cores + 1)]
 num_cores_combo.pack()
 update_units()
 
-submit_button = k.Button(root, text="submit", command=submit)
-submit_button.pack(padx = 15, pady = 21)
 
-select_button2 = k.Button(root, text="Select CSV File", command=select_input_file)
-select_button2.pack(padx=10, pady=21)
+select_button1 = k.Button(root, text="Select CSV File", command=complete_calculation)
+select_button1.pack(padx=10, pady=21)
 
 root.mainloop()

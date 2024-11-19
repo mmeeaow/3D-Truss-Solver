@@ -7,7 +7,7 @@ import subprocess
 
 Data = i.select_input_file()
 
-messagebox.showinfo(title="Progress", text = "Starting solving process.")
+messagebox.showinfo(title="Progress", message= "Starting solving process.")
 
 def post_process():
     subprocess.run(['python', 'Post_processing.py'], check=True)
@@ -62,12 +62,12 @@ def remove_empty_entries(Data):
 maxJoint = int(max(Data.iloc[:, 0]))
 maxMember = int(max(Data.iloc[:, 0]))
 
-Membernode = np.array(Data.iloc[:,11], Data.iloc[:, 12], dtype=int)
+Membernode = np.column_stack((Data.iloc[:,11], Data.iloc[:, 12])).astype(int)
 
-Nodecoor = np.array(Data.iloc[:, 1], Data.iloc[:, 2], Data.iloc[:, 3])
-Reactioncoor = [Data[:, 4], Data[:, 5], Data[:, 6]]
+Nodecoor = np.column_stack((Data.iloc[:, 1], Data.iloc[:, 2], Data.iloc[:, 3]))
+Reactioncoor = np.array([Data.iloc[:, 4], Data.iloc[:, 5], Data.iloc[:, 6]]).T
 
-Force = [Data.iloc[:, 7], Data.iloc[:, 8], Data.iloc[:, 9]]
+Force = np.array([Data.iloc[:, 7], Data.iloc[:, 8], Data.iloc[:, 9]]).T
 
 E = Data.iloc[:, 13]
 A = Data.iloc[:, 14]
@@ -77,73 +77,74 @@ c = np.zeros((maxMember, 3))
 #1st column is cosx, 2nd column is cosy and 3rd is cosz
 
 for j in range(1, maxMember):
-    dx = Nodecoor[Membernode[j, 2], 0] - Nodecoor[Membernode[j, 1], 0]
-    dy = Nodecoor[Membernode[j, 2], 1] - Nodecoor[Membernode[j, 1], 1]
-    dz = Nodecoor[Membernode[j, 2], 2] - Nodecoor[Membernode[j, 1], 2]
-    Member_L[j, 0] = np.sqrt(dx^2 + dy^2 + dz^2)
+    dx = Nodecoor[Membernode[j, 1], 0] - Nodecoor[Membernode[j, 0], 0]
+    dy = Nodecoor[Membernode[j, 1], 1] - Nodecoor[Membernode[j, 0], 1]
+    dz = Nodecoor[Membernode[j, 1], 2] - Nodecoor[Membernode[j, 0], 2]
+    Member_L[j, 0] = np.sqrt(dx**2 + dy**2 + dz**2)
     c[j, 0] = dx / Member_L[j, 0]
     c[j, 1] = dy / Member_L[j, 0]
     c[j, 2] = dz / Member_L[j, 0]
 
-global_K = np.zeros[3*maxJoint]
+global_K = np.zeros((3*maxJoint, 3*maxJoint))
 
 for j in range(1, maxMember):
-    K = E[ j, 1] * A[ j, 1] / Member_L[j, 1]
+    K = E.iloc[j] * A.iloc[j] / Member_L[j, 0]
     
     #The multiple different cos product terms are calculated here
-    c2 = [c[j, 1]^2, c[j, 2]^2, c[j, 3]^2]
-    cp = [c[j, 1]*c[j, 2], c[j, 1]*c[j, 3], c[j, 2]*c[j, 3]]
-    
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 2] += K*c2[j, 0]
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 1] += K*cp[j, 0]
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 0] += K*cp[j, 1]
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 2] -= K*c2[j, 0]
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 1] -= K*cp[j, 0]
-global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 0] -= K*cp[j, 1]
+    c2 = np.array((c[j, 0]**2, c[j, 1]**2, c[j, 2]**2))
+    cp = np.array((c[j, 0]*c[j, 1], c[j, 0]*c[j, 2], c[j, 1]*c[j, 2]))
+
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 2] += K*c2[0]
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 1] += K*cp[0]
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 0] - 0] += K*cp[1]
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 2] -= K*c2[0]
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 1] -= K*cp[0]
+    global_K[3*Membernode[j, 0] - 2, 3*Membernode[j, 1] - 0] -= K*cp[1]
 
 #row 2
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 2] += K*cp[j, 0]
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 1] += K*c2[j, 1]
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 0] += K*cp[j, 2]
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 2] -= K*cp[j, 0]
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 1] -= K*c2[j, 1]
-global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 0] -= K*cp[j, 2]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 2] += K*cp[0]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 1] += K*c2[1]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 0] - 0] += K*cp[2]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 2] -= K*cp[0]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 1] -= K*c2[1]
+    global_K[3*Membernode[j, 0] - 1, 3*Membernode[j, 1] - 0] -= K*cp[2]
 
 #row 3
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 2] += K*cp[j, 1]
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 1] += K*cp[j, 2]
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 0] += K*c2[j, 2]
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 2] -= K*cp[j, 1]
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 1] -= K*cp[j, 2]
-global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 0] -= K*c2[j, 2]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 2] += K*cp[1]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 1] += K*cp[2]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 0] - 0] += K*c2[2]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 2] -= K*cp[1]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 1] -= K*cp[2]
+    global_K[3*Membernode[j, 0] - 0, 3*Membernode[j, 1] - 0] -= K*c2[2]
 
 #row 4
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 2] -= K*c2[j, 0]
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 1] -= K*cp[j, 0]
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 0] -= K*cp[j, 1]
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 2] += K*c2[j, 0]
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 1] += K*cp[j, 0]
-global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 0] += K*cp[j, 1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 2] -= K*c2[0]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 1] -= K*cp[0]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 0] - 0] -= K*cp[1]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 2] += K*c2[0]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 1] += K*cp[0]
+    global_K[3*Membernode[j, 1] - 2, 3*Membernode[j, 1] - 0] += K*cp[1]
 
 #row 5
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 2] -= K*cp[j, 0]
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 1] -= K*c2[j, 1]
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 0] -= K*cp[j, 2]
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 2] += K*cp[j, 0]
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 1] += K*c2[j, 1]
-global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 0] += K*cp[j, 2]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 2] -= K*cp[0]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 1] -= K*c2[1]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 0] - 0] -= K*cp[2]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 2] += K*cp[0]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 1] += K*c2[1]
+    global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 0] += K*cp[2]
 
 #row 6
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 2] -= K*cp[j, 1]
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 1] -= K*cp[j, 2]
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 0] -= K*c2[j, 2]
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 2] += K*cp[j, 1]
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 1] += K*cp[j, 2]
-global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 0] += K*c2[j, 2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 2] -= K*cp[1]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 1] -= K*cp[2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 0] - 0] -= K*c2[2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 2] += K*cp[1]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 1] += K*cp[2]
+    global_K[3*Membernode[j, 1] - 0, 3*Membernode[j, 1] - 0] += K*c2[2]
 
+print(Force)
 #load vector
 def load_func(Force):
-    load = np.zeros(3*maxJoint,1)
+    load = np.zeros((3*maxJoint,1))
     for j in range(maxJoint):
         for k in range(0, 3):
             load[3*j - (2-k)] = Force[j, k]
