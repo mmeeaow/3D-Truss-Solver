@@ -4,17 +4,12 @@ from tkinter import messagebox
 import numpy as np
 import scipy as sp
 import subprocess
+import time
 
-Data = i.select_input_file()
-
-messagebox.showinfo(title="Progress", message= "Starting solving process.")
-
+[Data, kgorlbs, dim, E_units, F_units, core_usage] = i.search_and_destroy()
 def post_process():
     subprocess.run(['python', 'Post_processing.py'], check=True)
 
-dim = i.dimension_combo
-E_units = i.Youngs_modulus_combo
-F_units = i.force_combo
 
 def Unit_Converter(dim, E_units, F_units):
     Conversion_factor = [0, 0, 0]
@@ -56,45 +51,57 @@ def Unit_Converter(dim, E_units, F_units):
     
     return Conversion_factor
 
-def remove_empty_entries(Data):
-    return [t for t in Data if t == "" or t == 'None' or t == 'nan']
+Conv = Unit_Converter(dim, E_units, F_units)
+print(dim, E_units, F_units)
 
-maxJoint = int(max(Data.iloc[:, 0]))
-maxMember = int(max(Data.iloc[:, 0]))
+Data = Data.to_numpy().astype(float)
 
-Membernode = np.column_stack((Data.iloc[:,11], Data.iloc[:, 12])).astype(int)
 
-Nodecoor = np.column_stack((Data.iloc[:, 1], Data.iloc[:, 2], Data.iloc[:, 3]))
-Reactioncoor = np.array([Data.iloc[:, 4], Data.iloc[:, 5], Data.iloc[:, 6]]).T
+maxJoint = int(max(Data[:, 0]))
+maxMember = int(max(Data[:, 10]))
 
-Force = np.array([Data.iloc[:, 7], Data.iloc[:, 8], Data.iloc[:, 9]]).T
 
-E = Data.iloc[:, 13]
-A = Data.iloc[:, 14]
+Nodecoor = Data[:, [1,2,3]]#node coordinates
+Reactioncoor = Data[:, [4,5,6]]#reaction force directions
+Force = Data[:, [7,8,9]]#applied load
+Membernode = Data[:, [11, 12]].astype(int) #Member connecting nodes. 1st column is pipe start, 2nd is pipe end
+E = Data[:, 13]#Youngs modulus of each pipe
+A = Data[:, 14]#Cross Sectional Area
+
+def remove_emptiness(var):
+    var = var[~np.isnan(Data).any(axis=1)]
+    return var
+
+
+#removiing all the empty rows from the data
+Nodecoor = remove_emptiness(Nodecoor)
+Reactioncoor = remove_emptiness(Reactioncoor)
+Force = remove_emptiness(Force)
+
 
 Member_L = np.zeros((maxMember, 1))
 c = np.zeros((maxMember, 3))
-#1st column is cosx, 2nd column is cosy and 3rd is cosz
-
 for j in range(maxMember):
-    dx = Nodecoor[Membernode[j, 1], 0] - Nodecoor[Membernode[j, 0], 0]
-    dy = Nodecoor[Membernode[j, 1], 1] - Nodecoor[Membernode[j, 0], 1]
-    dz = Nodecoor[Membernode[j, 1], 2] - Nodecoor[Membernode[j, 0], 2]
+    
+    dx = Nodecoor[Membernode[j, 1]-1, 0] - Nodecoor[Membernode[j, 0]-1, 0]
+    dy = Nodecoor[Membernode[j, 1]-1, 1] - Nodecoor[Membernode[j, 0]-1, 1]
+    dz = Nodecoor[Membernode[j, 1]-1, 2] - Nodecoor[Membernode[j, 0]-1, 2]
     Member_L[j, 0] = np.sqrt(dx**2 + dy**2 + dz**2)
     c[j, 0] = dx / Member_L[j, 0]
     c[j, 1] = dy / Member_L[j, 0]
     c[j, 2] = dz / Member_L[j, 0]
 
-
 global_K = np.zeros((3*maxJoint, 3*maxJoint))
 
-for j in range(0, maxMember):
-    K = E.iloc[j] * A.iloc[j] / Member_L[j, 0]
+for j in range(maxMember):
+
+    K = E[j] * A[j] / Member_L[j, 0]
 
     #The multiple different cos product terms are calculated here
     c2 = np.array((c[j, 0]**2, c[j, 1]**2, c[j, 2]**2))
     cp = np.array((c[j, 0]*c[j, 1], c[j, 0]*c[j, 2], c[j, 1]*c[j, 2]))
 
+    
 
     global_K[3*Membernode[j, 0] - 3, 3*Membernode[j, 0] - 3] += K*c2[0]
     global_K[3*Membernode[j, 0] - 3, 3*Membernode[j, 0] - 2] += K*cp[0]
@@ -142,67 +149,52 @@ for j in range(0, maxMember):
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 3] += K*cp[1]
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 2] += K*cp[2]
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 1] += K*c2[2]
+global_k_store = global_K.copy()
 
-    if j == maxMember:
-        np.savetxt('global_mat.csv', global_K, delimiter=',')
-
-
-#load vector
-def load_func(Force):
-    load = np.zeros((3*maxJoint,1))
-    for j in range(maxJoint):
-        for k in range(0, 3):
-            load[3*j - (2-k)] = Force[j, k]
-
-    return load
-load = load_func(Force)
-global_K_store = global_K
-for i in range(1, maxJoint+1):
-
-    for j in range(1, 4):
-        
-        if Reactioncoor[i-1, j-1] == 1:
-            
-            global_K_store[:, 3*i - (4-j)] = 0
-            global_K_store[3*i - (4-j), :] = 0
-            global_K_store[3*i - (4-j), 3*i - (4-j)] = 1
-
-
-file_name = "debug_ses2.0.0.csv"
-file_name2 = "debug_ses2.0.1.csv"
-file_name3 = "debug_ses2.0.2.csv"
-np.savetxt(file_name, global_K,  delimiter=",", fmt='%d')
-np.savetxt(file_name2, global_K_store,  delimiter=",", fmt='%d')
-np.savetxt(file_name3, load,  delimiter=",")
-
-#Actual Solution process
-
-N_disp = np.linalg.solve(global_K_store, load)
-
-N_result = np.zeros((maxJoint, 3))
+load = np.zeros((3*maxJoint, 1))
 
 for j in range(maxJoint):
     for k in range(3):
-        N_result[j, k] = N_disp[3*j - (2-k)]
+        load[3*j - (2-k)] = Force[j, k]
+
+#the matrix to calculate reaction forces
+
+
+for i in range(1, maxJoint+1):
+    for j in range(1, 4):
+         if Reactioncoor[i-1, j-1] == 1:
+            
+            global_k_store[:, 3*i - (4-j)] = 0
+            global_k_store[3*i - (4-j), :] = 0
+            global_k_store[3*i - (4-j), 3*i - (4-j)] = 1
+
+# np.savetxt('perf01.csv', global_K, delimiter=',')
+
+N_disp = np.linalg.solve(global_k_store, load)
+N_result = np.zeros((maxJoint, 3))
+
+for j in range(1, maxJoint + 1):
+    for k in range(1, 4):
+        N_result[j-1, k-1] = N_disp[3*j - (4-k)].item()
 
 Stresses = np.zeros((maxMember, 1))
 du = [0, 0, 0]
 
 for i in range(maxMember):
+    
     #Directional Displacements
-    du[1] = c[j, 0] * (N_result[Membernode[i, 1], 0] - N_result[Membernode[i, 0], 0])
-    du[2] = c[j, 1] * (N_result[Membernode[i, 1], 1] - N_result[Membernode[i, 0], 1])
-    du[3] = c[j, 2] * (N_result[Membernode[i, 1], 2] - N_result[Membernode[i, 0], 2])
+    du[0] = c[j, 0] * (N_result[Membernode[i, 1]-1, 0] - N_result[Membernode[i, 0]-1, 0])
+    du[1] = c[j, 1] * (N_result[Membernode[i, 1]-1, 1] - N_result[Membernode[i, 0]-1, 1])
+    du[2] = c[j, 2] * (N_result[Membernode[i, 1]-1, 2] - N_result[Membernode[i, 0]-1, 2])
 
-    Stresses[i, 0] = (E[i, 0]/Member_L[i, 0])*(du[0] + du[1] + du[2])
+    Stresses[i] = (E[i]/Member_L[i])*(du[0] + du[1] + du[2])
 
 #Reaction forces
-R = global_K * N_disp
+R = (global_K @ N_disp) - load
 Reaction3d = np.zeros((maxJoint, 3))
 
-for j in range(maxJoint):
-    for k in range(3):
-        Reaction3d[j, k] = R[3*j - (2-k)]
+for j in range(1, maxJoint + 1):
+    for k in range(1,4):
+        Reaction3d[j-1, k-1] = R[3*j - (4-k)].item()
 
-post_process()
 

@@ -7,6 +7,13 @@ from pandas import read_excel
 import psutil
 import subprocess
 
+file_inputs = None
+kgorlbs = None
+dimension = None
+Youngs_mod_unit = None
+force_unit = None
+core_usage = None
+
 def update_units(*args):
     # This function is called whenever the user selects a unit from the dropdown menu.
     unit_system = unit_system_var.get()
@@ -27,13 +34,17 @@ def update_units(*args):
     force_combo['values'] = Force_units
 
 def submit():
-    kgorlbs = unit_system_var.get()
-    dimension = dimension_combo.get()
-    Youngs_mod_unit = Youngs_modulus_combo.get()
-    force_unit = force_combo.get()
-    core_usage = num_cores_var.get()
+    v1 = unit_system_var.get()
+    v2 = dimension_combo.get()
+    v3 = Youngs_modulus_combo.get()
+    v4 = force_combo.get()
+    v5 = num_cores_var.get()
+
+    return v1, v2, v3, v4, v5
 
 def select_input_file():
+
+
     user_file = filedialog.askopenfilename(
         title="Select Input File",
         filetypes=[("Excel Files", "*.xlsx")]
@@ -42,7 +53,7 @@ def select_input_file():
     if user_file:
         messagebox.showinfo(message= f"File Selected: {user_file}")
         try:
-            inputs = read_excel(user_file, skiprows = 1, dtype = float)
+            inputs = read_excel(user_file, skiprows = 0, dtype = float)
             if inputs.shape[1] != 15:
                messagebox.showerror("Error", "The selected file was not readable. Please ensure it has the correct number of columns.")
                return None
@@ -53,8 +64,22 @@ def select_input_file():
             return None
     return None
 
-def complete_calculation():
-    subprocess.run(['python', 'Action_file.py'], check = False)
+#def complete_calculation():
+    #subprocess.run(['python', 'Action_file.py'], check = False)
+
+def destroy_window():
+    root.destroy()
+
+def search_and_destroy():
+    [v1, v2, v3, v4, v5] = submit()
+    
+    file_inputs = select_input_file()
+    
+    destroy_window()
+
+    return file_inputs, v1, v2, v3, v4, v5
+
+
 
 
 #main window
@@ -98,10 +123,12 @@ core_label.pack()
 num_cores_combo = ttk.Combobox(root, textvariable = num_cores_var)
 num_cores_combo['values'] = [str(i) for i in range(1, available_cpu_cores + 1)]
 num_cores_combo.pack()
+
 update_units()
 
 
-select_button1 = k.Button(root, text="Select CSV File", command=complete_calculation)
+select_button1 = k.Button(root, text="Select", command=search_and_destroy)
 select_button1.pack(padx=10, pady=21)
 
-root.mainloop()
+print(kgorlbs)
+# root.mainloop()
