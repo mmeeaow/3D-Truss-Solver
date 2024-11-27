@@ -6,7 +6,10 @@ import scipy as sp
 import subprocess
 import time
 
-[Data, kgorlbs, dim, E_units, F_units, core_usage] = i.search_and_destroy()
+
+[Data, kgorlbs, dim, E_units, F_units, core_usage] = i.submit()
+
+
 def post_process():
     subprocess.run(['python', 'Post_processing.py'], check=True)
 
@@ -51,7 +54,7 @@ def Unit_Converter(dim, E_units, F_units):
     
     return Conversion_factor
 
-Conv = Unit_Converter(dim, E_units, F_units)
+[dim_val, Y_mod, F_U_value] = Unit_Converter(dim, E_units, F_units)
 print(dim, E_units, F_units)
 
 Data = Data.to_numpy().astype(float)
@@ -95,7 +98,7 @@ global_K = np.zeros((3*maxJoint, 3*maxJoint))
 
 for j in range(maxMember):
 
-    K = E[j] * A[j] / Member_L[j, 0]
+    K = (E[j] * A[j] / Member_L[j, 0]) #* (Y_mod*dim_val)
 
     #The multiple different cos product terms are calculated here
     c2 = np.array((c[j, 0]**2, c[j, 1]**2, c[j, 2]**2))
@@ -149,13 +152,14 @@ for j in range(maxMember):
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 3] += K*cp[1]
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 2] += K*cp[2]
     global_K[3*Membernode[j, 1] - 1, 3*Membernode[j, 1] - 1] += K*c2[2]
+np.savetxt('perf02.csv', global_K, delimiter=',')
 global_k_store = global_K.copy()
 
 load = np.zeros((3*maxJoint, 1))
 
 for j in range(maxJoint):
     for k in range(3):
-        load[3*j - (2-k)] = Force[j, k]
+        load[3*j - (2-k)] = Force[j, k]# * F_U_value
 
 #the matrix to calculate reaction forces
 
@@ -170,7 +174,7 @@ for i in range(1, maxJoint+1):
 
 # np.savetxt('perf01.csv', global_K, delimiter=',')
 
-N_disp = np.linalg.solve(global_k_store, load)
+N_disp = np.linalg.solve(global_k_store, load) / dim_val
 N_result = np.zeros((maxJoint, 3))
 
 for j in range(1, maxJoint + 1):
@@ -187,14 +191,14 @@ for i in range(maxMember):
     du[1] = c[j, 1] * (N_result[Membernode[i, 1]-1, 1] - N_result[Membernode[i, 0]-1, 1])
     du[2] = c[j, 2] * (N_result[Membernode[i, 1]-1, 2] - N_result[Membernode[i, 0]-1, 2])
 
-    Stresses[i] = (E[i]/Member_L[i])*(du[0] + du[1] + du[2])
+    Stresses[i] = (E[i]/Member_L[i])*(du[0] + du[1] + du[2]) / (F_U_value / dim_val**2)
 
 #Reaction forces
-R = (global_K @ N_disp) - load
+R = ((global_K @ N_disp) - load) / F_U_value
 Reaction3d = np.zeros((maxJoint, 3))
 
 for j in range(1, maxJoint + 1):
     for k in range(1,4):
         Reaction3d[j-1, k-1] = R[3*j - (4-k)].item()
 
-
+print('Hi')

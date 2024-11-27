@@ -7,12 +7,6 @@ from pandas import read_excel
 import psutil
 import subprocess
 
-file_inputs = None
-kgorlbs = None
-dimension = None
-Youngs_mod_unit = None
-force_unit = None
-core_usage = None
 
 def update_units(*args):
     # This function is called whenever the user selects a unit from the dropdown menu.
@@ -34,13 +28,39 @@ def update_units(*args):
     force_combo['values'] = Force_units
 
 def submit():
-    v1 = unit_system_var.get()
-    v2 = dimension_combo.get()
-    v3 = Youngs_modulus_combo.get()
-    v4 = force_combo.get()
-    v5 = num_cores_var.get()
+    isitin = 0
+    while isitin == 0:
+        v1 = unit_system_var.get()
+        v2 = dimension_combo.get()
+        v3 = Youngs_modulus_combo.get()
+        v4 = force_combo.get()
+        v5 = num_cores_var.get()
+        
+        dict = {
+            'Unit system': v1,
+            'Length Unit': v2,
+            'Youngs Modulus Unit': v3,
+            'Force Unit': v4,
+            'Number of Cores': v5
+        }
+        for nem, vel in dict.items():
+            if vel == None:
+                messagebox.showerror("Error", f"No value selected for {nem}. Please resubmit values")
+                v1 = unit_system_var.get()
+                v2 = dimension_combo.get()
+                v3 = Youngs_modulus_combo.get()
+                v4 = force_combo.get()
+                v5 = num_cores_var.get()
+                
+        v0 = select_input_file()
+            
+        if vel != None:
+            isitin = 1
 
-    return v1, v2, v3, v4, v5
+    root.destroy()
+
+
+    return v0, v1, v2, v3, v4, v5
 
 def select_input_file():
 
@@ -67,17 +87,6 @@ def select_input_file():
 #def complete_calculation():
     #subprocess.run(['python', 'Action_file.py'], check = False)
 
-def destroy_window():
-    root.destroy()
-
-def search_and_destroy():
-    [v1, v2, v3, v4, v5] = submit()
-    
-    file_inputs = select_input_file()
-    
-    destroy_window()
-
-    return file_inputs, v1, v2, v3, v4, v5
 
 
 
@@ -127,8 +136,7 @@ num_cores_combo.pack()
 update_units()
 
 
-select_button1 = k.Button(root, text="Select", command=search_and_destroy)
+select_button1 = k.Button(root, text="Select", command=root.destroy)
 select_button1.pack(padx=10, pady=21)
 
-print(kgorlbs)
 # root.mainloop()
