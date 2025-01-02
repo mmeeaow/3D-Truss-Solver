@@ -62,7 +62,7 @@ class Inputs:
             self.e_cb['values'] = ('Pa', 'GPa')
             self.f_cb['values'] = ('N', 'kN')
         elif u_s == "Imperial":
-            self.l_cb['values'] = ('in', 'ft', 'm')
+            self.l_cb['values'] = ('in', 'ft', 'yd')
             self.e_cb['values'] = ('psi', 'ksi')
             self.f_cb['values'] = ('lbf', 'kips')
         
@@ -102,11 +102,10 @@ class Inputs:
 
         data = pd.DataFrame([data])
         data.to_json('user_inputs.json', orient='records', lines=True)
+
 def main():
-    if __name__ == "__main__":
-        root = Tk()
-        app = Inputs(root)
-        root.mainloop()
-
-
-# main()                
+    root = Tk()
+    app = Inputs(root)
+    root.mainloop()
+    return app.file
+#main()
